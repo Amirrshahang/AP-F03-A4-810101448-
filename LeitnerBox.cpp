@@ -6,15 +6,9 @@
 
 using namespace std;
 
-void error(string message) {
-    cerr << message << endl;
-    abort();
-}
-
 class Card {
 public:
     Card(string Qu, string An) {
-        if (Qu.empty() || An.empty()) error("Question and Answer cannot be empty");
         question = Qu;
         answer = An;
         wrongAnswer = 0;
@@ -26,7 +20,7 @@ public:
 
     string toString() {
         ostringstream os;
-        os << question << " " << answer;
+        os << question <<" "<< answer;
         return os.str();
     }
 
@@ -45,6 +39,8 @@ private:
 
 class LeitnerBox {
 public:
+    LeitnerBox() : streak(0), current_day(1), lastReviewed(false) {}
+
     string toString() { 
         ostringstream os;
         os << "Daily Box:" << endl;
@@ -63,7 +59,6 @@ public:
         for (auto& card : monthlyCards) {
             os << card->toString() << endl;
         }
-        
         return os.str();
     }
 
@@ -81,6 +76,10 @@ public:
     }
 
     void reviewToday(int numberOfFlashcards) {
+        if (!lastReviewed) {
+            updateStreak();
+        }
+
         for (int i = 0; i < numberOfFlashcards; ++i) {
             cout << "Flashcard: " << dailyCards[i]->getQuestion() << endl << "Your answer: ";
             string yourAnswer;
@@ -96,22 +95,43 @@ public:
             }
         }
         cout << "You’ve completed today’s review!"
-         << "Keep the momentum going and continue building your knowledge, one flashcard at a time!" << endl;
+             << "Keep the momentum going and continue building your knowledge, one flashcard at a time!" << endl;
     }
 
-    void moveToThreeDayBox(Card* card) {moveCards(dailyCards, threeDayCards, card);}
+    void Streak() {
+        cout << "Your current streak is: " << streak << endl;
+        cout << "Keep going!" << endl;
+    }
 
-    void moveToWeeklyBox(Card* card) {moveCards(threeDayCards, weeklyCards, card);}
+    void resetStreak() {streak = 0;lastReviewed = false;}
+    void updateStreak() {streak++;lastReviewed = true;}
 
-    void moveToMonthlyBox(Card* card) {moveCards(weeklyCards, monthlyCards, card);}
+    void moveToThreeDayBox(Card* card) { moveCards(dailyCards, threeDayCards, card); }
+    void moveToWeeklyBox(Card* card) { moveCards(threeDayCards, weeklyCards, card); }
+    void moveToMonthlyBox(Card* card) { moveCards(weeklyCards, monthlyCards, card); }
 
-    
+    void next_day() {
+        if (!lastReviewed) {
+            resetStreak(); 
+        } else {
+            updateStreak(); 
+        }
+
+        lastReviewed = false; 
+        current_day++; 
+        cout << "Good morning! Today is day " << current_day << " of our journey." << endl;
+        cout << "Your current streak is: " << streak << endl;
+        cout << "Start reviewing to keep your streak!" << endl;
+    }
 
 private:
     vector<Card*> dailyCards;
     vector<Card*> threeDayCards;
     vector<Card*> weeklyCards;
     vector<Card*> monthlyCards;
+    int streak;
+    int current_day;
+    bool lastReviewed;
 
     void moveCards(vector<Card*>& from, vector<Card*>& to, Card* card) {
         auto it = find(from.begin(), from.end(), card);
@@ -140,7 +160,12 @@ int main() {
             dailyBox.reviewToday(numberOfFlashcards);
         } else if (command == "dump") {
             cout << dailyBox.toString() << endl;
-        }
+        } else if (command == "next_day") {
+            dailyBox.next_day();
+        } else if (command == "streak") {
+            dailyBox.Streak();
+
     }
+
     return 0;
 }
