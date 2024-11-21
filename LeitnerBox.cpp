@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdlib>
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 
@@ -15,20 +16,21 @@ public:
         rightAnswer = 0;
     }
 
-    string getQuestion() { return question; }
-    string getAnswer() { return answer; }
-
     string toString() {
         ostringstream os;
-        os << question <<" "<< answer;
+        os << question << " " << answer;
         return os.str();
     }
+
+    string getQuestion() { return question; }
+    string getAnswer() { return answer; }
 
     void incrementWrongAnswer() { wrongAnswer++; }
     void incrementRightAnswer() { rightAnswer++; }
 
-    int countRightAnswer() { return rightAnswer; }  
-    int countWrongAnswer() { return wrongAnswer; }  
+    int countRightAnswer() { return rightAnswer; }
+    int countWrongAnswer() { return wrongAnswer; }
+    void resetWrongAnswer() { wrongAnswer = 0; }
 
 private:
     string question;
@@ -41,7 +43,7 @@ class LeitnerBox {
 public:
     LeitnerBox() : streak(0), current_day(1), lastReviewed(false) {}
 
-    string toString() { 
+    string toString() {
         ostringstream os;
         os << "Daily Box:" << endl;
         for (auto& card : dailyCards) {
@@ -66,36 +68,12 @@ public:
 
     void addFlashcards(int numberOfQuestions) {
         string question, answer;
-        cin.ignore();
         for (int i = 0; i < numberOfQuestions; ++i) {
             getline(cin, question);
             getline(cin, answer);
-            dailyCards.emplace_back(new Card(question, answer));  // ایجاد کارت جدید و افزودن به وکتور
+            dailyCards.emplace_back(new Card(question, answer));
         }
         cout << "flashcards added to the daily box" << endl;
-    }
-
-    void reviewToday(int numberOfFlashcards) {
-        if (!lastReviewed) {
-            updateStreak();
-        }
-
-        for (int i = 0; i < numberOfFlashcards; ++i) {
-            cout << "Flashcard: " << dailyCards[i]->getQuestion() << endl << "Your answer: ";
-            string yourAnswer;
-            cin >> yourAnswer;
-            if (checkAnswer(dailyCards[i], yourAnswer)) {
-                dailyCards[i]->incrementRightAnswer();
-                moveToThreeDayBox(dailyCards[i]);
-                cout << "Your answer was correct! Well done, keep it up!" << endl;
-            } else {
-                cout << "Your answer was incorrect."
-                << "Don't worry! The correct answer is: " << dailyCards[i]->getAnswer() << " Keep practicing!" << endl;
-                dailyCards[i]->incrementWrongAnswer();
-            }
-        }
-        cout << "You’ve completed today’s review!"
-             << "Keep the momentum going and continue building your knowledge, one flashcard at a time!" << endl;
     }
 
     void Streak() {
@@ -103,25 +81,91 @@ public:
         cout << "Keep going!" << endl;
     }
 
-    void resetStreak() {streak = 0;lastReviewed = false;}
-    void updateStreak() {streak++;lastReviewed = true;}
+    void resetStreak() { streak = 0; lastReviewed = false; }
+    void updateStreak() { streak++; lastReviewed = true; }
 
-    void moveToThreeDayBox(Card* card) { moveCards(dailyCards, threeDayCards, card); }
-    void moveToWeeklyBox(Card* card) { moveCards(threeDayCards, weeklyCards, card); }
-    void moveToMonthlyBox(Card* card) { moveCards(weeklyCards, monthlyCards, card); }
+    void moveToNextBox(Card* card) {
+        if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
+            dailyCards.erase(remove(dailyCards.begin(), dailyCards.end(), card), dailyCards.end());
+            threeDayCards.push_back(card);
+        }
+        else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
+            threeDayCards.erase(remove(threeDayCards.begin(), threeDayCards.end(), card), threeDayCards.end());
+            weeklyCards.push_back(card);
+        }
+        else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
+            weeklyCards.erase(remove(weeklyCards.begin(), weeklyCards.end(), card), weeklyCards.end());
+            monthlyCards.push_back(card);
+        }
+    }
+
+    void moveToPreviousBox(Card* card) {
+        if (find(monthlyCards.begin(), monthlyCards.end(), card) != monthlyCards.end()) {
+            monthlyCards.erase(remove(monthlyCards.begin(), monthlyCards.end(), card), monthlyCards.end());
+            weeklyCards.push_back(card);
+
+        } else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
+            weeklyCards.erase(remove(weeklyCards.begin(), weeklyCards.end(), card), weeklyCards.end());
+            threeDayCards.push_back(card);
+
+        } else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
+            threeDayCards.erase(remove(threeDayCards.begin(), threeDayCards.end(), card), threeDayCards.end());
+            dailyCards.push_back(card);
+        }
+    }
 
     void next_day() {
         if (!lastReviewed) {
-            resetStreak(); 
-        } else {
-            updateStreak(); 
+            resetStreak();
         }
-
-        lastReviewed = false; 
-        current_day++; 
+        lastReviewed = false;
+        current_day++;
         cout << "Good morning! Today is day " << current_day << " of our journey." << endl;
         cout << "Your current streak is: " << streak << endl;
         cout << "Start reviewing to keep your streak!" << endl;
+    }
+
+    // Handle reviewing for today
+    void reviewToday(int numberOfFlashcards) {
+        if (!lastReviewed) {
+        updateStreak();
+        }
+        vector<Card*> allCardsToReview;
+
+        allCardsToReview.insert(allCardsToReview.end(), monthlyCards.begin(), monthlyCards.end());
+        allCardsToReview.insert(allCardsToReview.end(), weeklyCards.begin(), weeklyCards.end());
+        allCardsToReview.insert(allCardsToReview.end(), threeDayCards.begin(), threeDayCards.end());
+        allCardsToReview.insert(allCardsToReview.end(), dailyCards.begin(), dailyCards.end());
+
+        vector<Card*> reviewedCards;
+
+        int flashcardsReviewed = 0;
+        for (Card* card : allCardsToReview) {
+            if (flashcardsReviewed >= numberOfFlashcards) {
+                break;
+            }
+
+            if (find(reviewedCards.begin(), reviewedCards.end(), card) == reviewedCards.end()) {
+                cout << "Flashcard: " << card->getQuestion() << endl << "Your answer: ";
+                string userAnswer;
+                cin >> userAnswer;
+
+                if (checkAnswer(card, userAnswer)) {
+                    card->incrementRightAnswer();
+                    moveToNextBox(card);
+                    cout << "Your answer was correct! Well done, keep it up!" << endl;
+                } else {
+                    card->incrementWrongAnswer();
+                    cout << "Your answer was incorrect. The correct answer is: " << card->getAnswer() << ". Keep practicing!" << endl;
+                    handleWrongAnswer(card);
+                }
+
+                reviewedCards.push_back(card);
+                flashcardsReviewed++;
+            }
+        }
+
+        cout << "You’ve completed today’s review! Keep the momentum going and continue building your knowledge, one flashcard at a time!" << endl;
     }
 
 private:
@@ -133,12 +177,10 @@ private:
     int current_day;
     bool lastReviewed;
 
-    void moveCards(vector<Card*>& from, vector<Card*>& to, Card* card) {
-        auto it = find(from.begin(), from.end(), card);
-        if (it != from.end()) {
-            to.push_back(*it);
-            from.erase(it);
-            cout << "Card moved to new box." << endl;
+    void handleWrongAnswer(Card* card) {
+        if (card->countWrongAnswer() >= 2) {
+            moveToPreviousBox(card);
+            card->resetWrongAnswer();
         }
     }
 };
@@ -164,7 +206,7 @@ int main() {
             dailyBox.next_day();
         } else if (command == "streak") {
             dailyBox.Streak();
-
+        }
     }
 
     return 0;
