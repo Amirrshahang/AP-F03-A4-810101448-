@@ -14,7 +14,7 @@ public:
         answer = An;
         wrongAnswer = 0;
         rightAnswer = 0;
-        firstReviewedDay = 0;
+        hasBeenReviewedToday = false;
     }
 
     string toString() {
@@ -32,15 +32,17 @@ public:
     int countRightAnswer() { return rightAnswer; }
     int countWrongAnswer() { return wrongAnswer; }
     void resetWrongAnswer() { wrongAnswer = 0; }
-    int getFirstReviewedDay() { return firstReviewedDay; }
-    void setFirstReviewedDay(int day) { firstReviewedDay = day; }
+    bool getHasBeenReviewedToday() { return hasBeenReviewedToday; }
+    void setHasBeenReviewedToday(bool value) { hasBeenReviewedToday = value; }
+
 
 private:
     string question;
     string answer;
     int wrongAnswer;
     int rightAnswer;
-    int firstReviewedDay;
+    bool hasBeenReviewedToday;
+    
 };
 
 class LeitnerBox {
@@ -69,8 +71,8 @@ public:
     }
 
     bool shouldReviewCard(Card* card, int interval) {
-        int daysSinceFirstReviewed = current_day - card->getFirstReviewedDay();
-        return daysSinceFirstReviewed % interval == 0;
+        cout <<current_day % interval<<endl;
+        return current_day % interval == 0 && !card->getHasBeenReviewedToday();
     }
 
     bool checkAnswer(Card* card, string& userAnswer) { return userAnswer == card->getAnswer(); }
@@ -107,18 +109,7 @@ public:
             dailyCards.push_back(card);
         }
     }
-
-    void next_day() {
-        if (!lastReviewed) {
-            resetStreak();
-        }
-        lastReviewed = false;
-        current_day++;
-        cout << "Good morning! Today is day " << current_day << " of our journey." << endl;
-        cout << "Your current streak is: " << streak << endl;
-        cout << "Start reviewing to keep your streak!" << endl;
-    }
-
+ 
     void reviewToday(int numberOfFlashcards) {
         if (!lastReviewed) {
             updateStreak();
@@ -134,17 +125,18 @@ public:
 
         int flashcardsReviewed = 0;
         for (Card* card : allCardsToReview) {
+
             if (flashcardsReviewed >= numberOfFlashcards) {
                 break;
             }
             if (find(reviewedCards.begin(), reviewedCards.end(), card) == reviewedCards.end()) {
                 int interval = 0;
                 if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
-                    interval = 1; // Daily Box
+                    interval = 1; 
                 } else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
-                    interval = 3; // 3-Day Box
+                    interval = 3; 
                 } else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
-                    interval = 7; // Weekly Box
+                    interval = 7; 
                 }
                 if (shouldReviewCard(card, interval)) {
                     cout << "Flashcard: " << card->getQuestion() << endl << "Your answer: ";
@@ -154,6 +146,7 @@ public:
                     if (checkAnswer(card, userAnswer)) {
                         card->incrementRightAnswer();
                         moveToNextBox(card);
+                        card->setHasBeenReviewedToday(true);
                         cout << "Your answer was correct! Well done, keep it up!" << endl;
                     } else {
                         card->incrementWrongAnswer();
@@ -168,6 +161,28 @@ public:
         }
 
         cout << "You’ve completed today’s review! Keep the momentum going and continue building your knowledge, one flashcard at a time!" << endl;
+    }
+    void next_day() {
+        if (!lastReviewed) {
+            resetStreak();
+        }
+        lastReviewed = false;
+        current_day++;
+        cout << "Good morning! Today is day " << current_day << " of our journey." << endl;
+        cout << "Your current streak is: " << streak << endl;
+        cout << "Start reviewing to keep your streak!" << endl;
+        for (auto& card : dailyCards) {
+            card->setHasBeenReviewedToday(false);
+        }
+        for (auto& card : threeDayCards) {
+            card->setHasBeenReviewedToday(false);
+        }
+        for (auto& card : weeklyCards) {
+            card->setHasBeenReviewedToday(false);
+        }
+        for (auto& card : monthlyCards) {
+            card->setHasBeenReviewedToday(false);
+        }
     }
 
 private:
@@ -185,24 +200,25 @@ private:
             card->resetWrongAnswer();
         }
     }
+
     void moveToNextBox(Card* card) {
         if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
             dailyCards.erase(remove(dailyCards.begin(), dailyCards.end(), card), dailyCards.end());
             threeDayCards.push_back(card);
-            card->setFirstReviewedDay(current_day);
         }
         else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
             threeDayCards.erase(remove(threeDayCards.begin(), threeDayCards.end(), card), threeDayCards.end());
             weeklyCards.push_back(card);
-            card->setFirstReviewedDay(current_day);
         }
         else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
             weeklyCards.erase(remove(weeklyCards.begin(), weeklyCards.end(), card), weeklyCards.end());
             monthlyCards.push_back(card);
-            card->setFirstReviewedDay(current_day);
         }
     }
+
+    
 };
+
 int main() {
     LeitnerBox dailyBox;
 
@@ -226,5 +242,6 @@ int main() {
             dailyBox.Streak();
         }
     }
+
     return 0;
 }
