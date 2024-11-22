@@ -14,6 +14,7 @@ public:
         answer = An;
         wrongAnswer = 0;
         rightAnswer = 0;
+        firstReviewedDay = 0;
     }
 
     string toString() {
@@ -31,12 +32,15 @@ public:
     int countRightAnswer() { return rightAnswer; }
     int countWrongAnswer() { return wrongAnswer; }
     void resetWrongAnswer() { wrongAnswer = 0; }
+    int getFirstReviewedDay() { return firstReviewedDay; }
+    void setFirstReviewedDay(int day) { firstReviewedDay = day; }
 
 private:
     string question;
     string answer;
     int wrongAnswer;
     int rightAnswer;
+    int firstReviewedDay;
 };
 
 class LeitnerBox {
@@ -64,6 +68,11 @@ public:
         return os.str();
     }
 
+    bool shouldReviewCard(Card* card, int interval) {
+        int daysSinceFirstReviewed = current_day - card->getFirstReviewedDay();
+        return daysSinceFirstReviewed % interval == 0;
+    }
+
     bool checkAnswer(Card* card, string& userAnswer) { return userAnswer == card->getAnswer(); }
 
     void addFlashcards(int numberOfQuestions) {
@@ -83,21 +92,6 @@ public:
 
     void resetStreak() { streak = 0; lastReviewed = false; }
     void updateStreak() { streak++; lastReviewed = true; }
-
-    void moveToNextBox(Card* card) {
-        if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
-            dailyCards.erase(remove(dailyCards.begin(), dailyCards.end(), card), dailyCards.end());
-            threeDayCards.push_back(card);
-        }
-        else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
-            threeDayCards.erase(remove(threeDayCards.begin(), threeDayCards.end(), card), threeDayCards.end());
-            weeklyCards.push_back(card);
-        }
-        else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
-            weeklyCards.erase(remove(weeklyCards.begin(), weeklyCards.end(), card), weeklyCards.end());
-            monthlyCards.push_back(card);
-        }
-    }
 
     void moveToPreviousBox(Card* card) {
         if (find(monthlyCards.begin(), monthlyCards.end(), card) != monthlyCards.end()) {
@@ -125,10 +119,9 @@ public:
         cout << "Start reviewing to keep your streak!" << endl;
     }
 
-    // Handle reviewing for today
     void reviewToday(int numberOfFlashcards) {
         if (!lastReviewed) {
-        updateStreak();
+            updateStreak();
         }
         vector<Card*> allCardsToReview;
 
@@ -144,24 +137,33 @@ public:
             if (flashcardsReviewed >= numberOfFlashcards) {
                 break;
             }
-
             if (find(reviewedCards.begin(), reviewedCards.end(), card) == reviewedCards.end()) {
-                cout << "Flashcard: " << card->getQuestion() << endl << "Your answer: ";
-                string userAnswer;
-                cin >> userAnswer;
-
-                if (checkAnswer(card, userAnswer)) {
-                    card->incrementRightAnswer();
-                    moveToNextBox(card);
-                    cout << "Your answer was correct! Well done, keep it up!" << endl;
-                } else {
-                    card->incrementWrongAnswer();
-                    cout << "Your answer was incorrect. The correct answer is: " << card->getAnswer() << ". Keep practicing!" << endl;
-                    handleWrongAnswer(card);
+                int interval = 0;
+                if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
+                    interval = 1; // Daily Box
+                } else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
+                    interval = 3; // 3-Day Box
+                } else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
+                    interval = 7; // Weekly Box
                 }
+                if (shouldReviewCard(card, interval)) {
+                    cout << "Flashcard: " << card->getQuestion() << endl << "Your answer: ";
+                    string userAnswer;
+                    cin >> userAnswer;
 
-                reviewedCards.push_back(card);
-                flashcardsReviewed++;
+                    if (checkAnswer(card, userAnswer)) {
+                        card->incrementRightAnswer();
+                        moveToNextBox(card);
+                        cout << "Your answer was correct! Well done, keep it up!" << endl;
+                    } else {
+                        card->incrementWrongAnswer();
+                        cout << "Your answer was incorrect. The correct answer is: " << card->getAnswer() << ". Keep practicing!" << endl;
+                        handleWrongAnswer(card);
+                    }
+
+                    reviewedCards.push_back(card);
+                    flashcardsReviewed++;
+                }
             }
         }
 
@@ -183,8 +185,24 @@ private:
             card->resetWrongAnswer();
         }
     }
+    void moveToNextBox(Card* card) {
+        if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
+            dailyCards.erase(remove(dailyCards.begin(), dailyCards.end(), card), dailyCards.end());
+            threeDayCards.push_back(card);
+            card->setFirstReviewedDay(current_day);
+        }
+        else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
+            threeDayCards.erase(remove(threeDayCards.begin(), threeDayCards.end(), card), threeDayCards.end());
+            weeklyCards.push_back(card);
+            card->setFirstReviewedDay(current_day);
+        }
+        else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
+            weeklyCards.erase(remove(weeklyCards.begin(), weeklyCards.end(), card), weeklyCards.end());
+            monthlyCards.push_back(card);
+            card->setFirstReviewedDay(current_day);
+        }
+    }
 };
-
 int main() {
     LeitnerBox dailyBox;
 
@@ -208,6 +226,5 @@ int main() {
             dailyBox.Streak();
         }
     }
-
     return 0;
 }
