@@ -1,78 +1,36 @@
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cstdlib>
-#include <sstream>
-#include <algorithm>
-#include <map>  
+#include "LeitnerBox.hpp"
 
-using namespace std;
+LeitnerBox::LeitnerBox() : streak(0), current_day(1), lastReviewed(false), totalParticipationDays(0), numMasteredFlashcards(0){}
 
-class Card {
-public:
-    Card(string Qu, string An) {
-        question = Qu;
-        answer = An;
-        wrongAnswer = 0;
-        rightAnswer = 0;
-        hasBeenReviewedToday = false;
+LeitnerBox::~LeitnerBox() {
+    for (auto card : dailyCards) delete card;
+    for (auto card : threeDayCards) delete card;
+    for (auto card : weeklyCards) delete card;
+    for (auto card : monthlyCards) delete card;
+}
+
+string LeitnerBox::toString() {
+    ostringstream os;
+    os << "Daily Box:" << endl;
+    for (auto& card : dailyCards) {
+        os << card->toString() << endl;
     }
-
-    string toString() {
-        ostringstream os;
-        os << question << " " << answer;
-        return os.str();
+    os << "3-Day Box:" << endl;
+    for (auto& card : threeDayCards) {
+        os << card->toString() << endl;
     }
-
-    string getQuestion() { return question; }
-    string getAnswer() { return answer; }
-
-    void incrementWrongAnswer() { wrongAnswer++; }
-    int countWrongAnswer() { return wrongAnswer; }
-    void resetWrongAnswer() { wrongAnswer = 0; }
-    bool getHasBeenReviewedToday() { return hasBeenReviewedToday; }
-    void HasBeenReviewedToday(bool value) { hasBeenReviewedToday = value; }
-
-private:
-    string question;
-    string answer;
-    int wrongAnswer;
-    int rightAnswer;
-    bool hasBeenReviewedToday;
-};
-
-class LeitnerBox {
-public:
-    LeitnerBox() : streak(0), current_day(1), lastReviewed(false), totalParticipationDays(0), numMasteredFlashcards(0),
-        numberOfCorrectAnswers(0), numberOfIncorrectAnswers(0) {}
-
-    ~LeitnerBox() {
-        for (auto card : dailyCards) delete card;
-        for (auto card : threeDayCards) delete card;
-        for (auto card : weeklyCards) delete card;
-        for (auto card : monthlyCards) delete card;
+    os << "Weekly Box:" << endl;
+    for (auto& card : weeklyCards) {
+        os << card->toString() << endl;
     }
-    string toString() {
-        ostringstream os;
-        os << "Daily Box:" << endl;
-        for (auto& card : dailyCards) {
-            os << card->toString() << endl;
-        }
-        os << "3-Day Box:" << endl;
-        for (auto& card : threeDayCards) {
-            os << card->toString() << endl;
-        }
-        os << "Weekly Box:" << endl;
-        for (auto& card : weeklyCards) {
-            os << card->toString() << endl;
-        }
-        os << "Monthly Box:" << endl;
-        for (auto& card : monthlyCards) {
-            os << card->toString() << endl;
-        }
-        return os.str();
+    os << "Monthly Box:" << endl;
+    for (auto& card : monthlyCards) {
+        os << card->toString() << endl;
     }
-    void getProgressReport() {
+    return os.str();
+}
+
+void LeitnerBox::getProgressReport() {
         cout << "Challenge Progress Report:" << endl;
         cout << endl;
         cout << "Day of the Challenge: " << current_day << endl;
@@ -81,8 +39,9 @@ public:
         cout << "Mastered Flashcards: " << numMasteredFlashcards << endl;
         cout << endl;
         cout << "Keep up the great work! You're making steady progress toward mastering your flashcards." << endl;
-    }
-    void getReport(int startDay, int endDay) {
+}
+
+void LeitnerBox::getReport(int startDay, int endDay) {
         int correctAnswers = 0;
         int incorrectAnswers = 0;
         if(startDay!=endDay)
@@ -100,14 +59,17 @@ public:
         cout << "Correct Answers: " << correctAnswers<<endl;
         cout << "Incorrect Answers: " << incorrectAnswers << endl;
         cout << "Total: " << correctAnswers+incorrectAnswers <<endl;
-    }
-    bool shouldReviewCard(Card* card, int interval) {
-        return current_day % interval == 0 && !card->getHasBeenReviewedToday();
-    }
-    bool checkAnswer(Card* card, string& userAnswer) {
-        return userAnswer == card->getAnswer();
-    }
-    void addFlashcards(int numberOfQuestions) {
+}
+
+bool LeitnerBox::shouldReviewCard(Card* card, int interval) {
+    return current_day % interval == 0 && !card->getHasBeenReviewedToday();
+}
+
+bool LeitnerBox::checkAnswer(Card* card, string& userAnswer) {
+    return userAnswer == card->getAnswer();
+}
+
+void LeitnerBox::addFlashcards(int numberOfQuestions) {
         string question, answer;
         for (int i = 0; i < numberOfQuestions; ++i) {
 
@@ -116,23 +78,24 @@ public:
             dailyCards.push_back(new Card(question, answer));
         }
         cout << "flashcards added to the daily box" << endl;
-    }
-    void showStreak() {
+}
+void LeitnerBox::showStreak() {
         cout << "Your current streak is: " << streak << endl;
         cout << "Keep going!" << endl;
-    }
-    void addCardsToReview(vector<Card*>& cards, int interval, int& flashcardsReviewed,
-        int numberOfFlashcards, vector<Card*>& allCardsToReview) {
-        for (Card* card : cards) {
-            if (flashcardsReviewed >= numberOfFlashcards) break;
-            if (shouldReviewCard(card, interval)) {
-                allCardsToReview.push_back(card);
-                flashcardsReviewed++;
-            }
+}
+
+void LeitnerBox::addCardsToReview(vector<Card*>& cards, int interval, int& flashcardsReviewed,
+    int numberOfFlashcards, vector<Card*>& allCardsToReview) {
+    for (Card* card : cards) {
+        if (flashcardsReviewed >= numberOfFlashcards) break;
+        if (shouldReviewCard(card, interval)) {
+            allCardsToReview.push_back(card);
+            flashcardsReviewed++;
         }
     }
+}
 
-    void reviewToday(int numberOfFlashcards) {
+void LeitnerBox::reviewToday(int numberOfFlashcards) {
         if (!lastReviewed) { updateStreak(); totalParticipationDays++; }
 
         vector<Card*> allCardsToReview;
@@ -163,9 +126,8 @@ public:
         }
         dailyStats[current_day] = make_pair(correctAnswersToday, incorrectAnswersToday);
         cout << "You’ve completed today’s review! Keep the momentum going and continue building your knowledge, one flashcard at a time!" << endl;
-    }
-
-    void next_day() {
+}
+void LeitnerBox:: next_day() {
         current_day++;
 
         if (!lastReviewed) { 
@@ -185,96 +147,48 @@ public:
         for (auto& card : threeDayCards) { card->HasBeenReviewedToday(false); }
         for (auto& card : weeklyCards)   { card->HasBeenReviewedToday(false); }
         for (auto& card : monthlyCards)  { card->HasBeenReviewedToday(false); }
-    }
-
-private:
-    map<int, pair<int, int>> dailyStats;  
-    vector<Card*> dailyCards;
-    vector<Card*> threeDayCards;
-    vector<Card*> weeklyCards;
-    vector<Card*> monthlyCards;
-    int streak;
-    int current_day;
-    bool lastReviewed;
-    int totalParticipationDays;
-    int numMasteredFlashcards;
-    int numberOfCorrectAnswers;
-    int numberOfIncorrectAnswers;
-
-    void moveCardsBetweenBoxes(vector<Card*>& from, vector<Card*>& to) {
-        for (Card* card : from) {
-            to.push_back(card);
-            }
-        from.clear();
-    }
-    void handleWrongAnswer(Card* card) {
-        if (card->countWrongAnswer() >= 2) {
-            moveToPreviousBox(card);
-            card->resetWrongAnswer();
-        }
-    }
-    void moveToNextBox(Card* card) {
-        if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
-            dailyCards.erase(remove(dailyCards.begin(), dailyCards.end(), card), dailyCards.end());
-            threeDayCards.push_back(card);
-        }
-        else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
-            threeDayCards.erase(remove(threeDayCards.begin(), threeDayCards.end(), card), threeDayCards.end());
-            weeklyCards.push_back(card);
-        }
-        else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
-            weeklyCards.erase(remove(weeklyCards.begin(), weeklyCards.end(), card), weeklyCards.end());
-            monthlyCards.push_back(card);
-        } else if (find(monthlyCards.begin(), monthlyCards.end(), card) != monthlyCards.end()) {
-            monthlyCards.erase(remove(monthlyCards.begin(), monthlyCards.end(), card), monthlyCards.end());
-            numMasteredFlashcards++; 
-        }
-    }
-    void moveToPreviousBox(Card* card) {
-        if (find(monthlyCards.begin(), monthlyCards.end(), card) != monthlyCards.end()) {
-            monthlyCards.erase(remove(monthlyCards.begin(), monthlyCards.end(), card), monthlyCards.end());
-            weeklyCards.push_back(card);
-        } else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
-            weeklyCards.erase(remove(weeklyCards.begin(), weeklyCards.end(), card), weeklyCards.end());
-            threeDayCards.push_back(card);
-        } else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
-            threeDayCards.erase(remove(threeDayCards.begin(), threeDayCards.end(), card), threeDayCards.end());
-            dailyCards.push_back(card);
-        }
-    }
-    void updateStreak() { streak++; lastReviewed = true; }
-    void resetStreak() { streak = 0; lastReviewed = false; }
-
-};
-int main() {
-    LeitnerBox dailyBox;
-
-    string command;
-    while (cin >> command) {
-        if (command == "add_flashcard") {
-            int numberOfQuestions;
-            cin >> numberOfQuestions;
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            dailyBox.addFlashcards(numberOfQuestions);
-        } else if (command == "review_today") {
-            int numberOfFlashcards;
-            cin >> numberOfFlashcards;
-            cin.ignore();
-            dailyBox.reviewToday(numberOfFlashcards);
-        } else if (command == "dump") {
-            cout << dailyBox.toString() << endl;
-        } else if (command == "next_day") {
-            dailyBox.next_day();
-        } else if (command == "streak") {
-            dailyBox.showStreak();
-        }else if (command == "get_progress_report") {
-            dailyBox.getProgressReport();
-        }else if (command == "get_report") {
-            int startDay, endDay;
-            cin >> startDay >> endDay;
-            dailyBox.getReport(startDay, endDay);
-        }
-
-    }
-    return 0;
 }
+
+void LeitnerBox::moveCardsBetweenBoxes(vector<Card*>& from, vector<Card*>& to) {
+    for (Card* card : from) {
+        to.push_back(card);
+    }
+    from.clear();
+}
+
+void LeitnerBox::handleWrongAnswer(Card* card) {
+    if (card->countWrongAnswer() >= 2) {
+        moveToPreviousBox(card);
+        card->resetWrongAnswer();
+    }
+}
+
+void LeitnerBox::moveToNextBox(Card* card) {
+    if (find(dailyCards.begin(), dailyCards.end(), card) != dailyCards.end()) {
+        threeDayCards.push_back(card);
+        dailyCards.erase(find(dailyCards.begin(), dailyCards.end(), card));
+    } else if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
+        weeklyCards.push_back(card);
+        threeDayCards.erase(find(threeDayCards.begin(), threeDayCards.end(), card));
+    } else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
+        monthlyCards.push_back(card);
+        weeklyCards.erase(find(weeklyCards.begin(), weeklyCards.end(), card));
+        numMasteredFlashcards++; 
+    }
+}
+
+void LeitnerBox::moveToPreviousBox(Card* card) {
+    if (find(threeDayCards.begin(), threeDayCards.end(), card) != threeDayCards.end()) {
+        dailyCards.push_back(card);
+        threeDayCards.erase(find(threeDayCards.begin(), threeDayCards.end(), card));
+    } else if (find(weeklyCards.begin(), weeklyCards.end(), card) != weeklyCards.end()) {
+        threeDayCards.push_back(card);
+        weeklyCards.erase(find(weeklyCards.begin(), weeklyCards.end(), card));
+    } else if (find(monthlyCards.begin(), monthlyCards.end(), card) != monthlyCards.end()) {
+        weeklyCards.push_back(card);
+        monthlyCards.erase(find(monthlyCards.begin(), monthlyCards.end(), card));
+    }
+}
+
+void LeitnerBox::updateStreak() { streak++; lastReviewed = true; }
+void LeitnerBox::resetStreak() { streak = 0; lastReviewed = false; }
